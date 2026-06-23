@@ -1,0 +1,59 @@
+{
+  "skill_name": "mlflow-experiment",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building a Bayesian hierarchical model in PyMC to predict 12-month churn probability across our 42 PE portfolio companies. The training data covers 2022-Q1 through 2024-Q4. I want to set up MLflow tracking for this project from scratch — experiment naming, what tags to use, and then the full logging boilerplate for after the model samples. I'll be running this locally for now. The script is at evals/files/pymc_churn_model.py",
+      "expected_output": "Scaffold (experiment name following project/model-type convention, tags for model_type/data_vintage/status/reviewer) plus complete PyMC logging boilerplate including n_chains/n_draws/n_tune as params, max_rhat/min_bulk_ess/min_tail_ess/n_divergences as metrics, trace logged as netCDF to traces/ artifact path, ArviZ summary CSV to data/, and trace plot to plots/.",
+      "files": ["evals/files/pymc_churn_model.py"],
+      "assertions": [
+        "The response includes an experiment name following the {project-slug}/{model-type} convention (e.g., 'churn-prediction/bayesian-hierarchical')",
+        "The response includes mlflow.set_tag calls for model_type, data_vintage, and status",
+        "The response logs n_chains, n_draws, and n_tune as mlflow params",
+        "The response logs max_rhat, min_bulk_ess, min_tail_ess, and n_divergences as mlflow metrics",
+        "The response includes az.to_netcdf and mlflow.log_artifact for the trace, with artifact_path='traces/'",
+        "The response includes logging the ArviZ summary as a CSV artifact to data/",
+        "The response mentions keeping status='experimental' until the model passes a review (ds-model-evaluator or bayesian-reviewer)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My deal-scoring xgboost model just finished training. Here are the run details: experiment='deal-scoring/xgboost-v3', accuracy=0.81, precision=0.74, recall=0.68, AUC=0.87, n_estimators=400, max_depth=6, learning_rate=0.05. Run ID is 7f3a2b1c9d4e. I want to register this as 'pe-deal-scorer' and transition it to Staging. What's the full code to do that, and what should I check before promoting to Production?",
+      "expected_output": "mlflow.register_model() call using the run ID and model URI, transition_model_version_stage to Staging with archive_existing_versions=False, and a clear explanation of the pre-Production checklist: passing ds-model-evaluator four-pillar review, stakeholder sign-off, then transition to Production with archive_existing_versions=True.",
+      "files": [],
+      "assertions": [
+        "The response includes mlflow.register_model with the correct model URI format (runs:/{run_id}/model)",
+        "The response includes client.transition_model_version_stage with stage='Staging'",
+        "The response sets archive_existing_versions=False for the Staging transition",
+        "The response explains what needs to happen before Production (review, sign-off) and shows the Production transition with archive_existing_versions=True",
+        "The response mentions ds-model-evaluator or a model review step as a prerequisite for Production"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I ran two versions of my revenue forecasting model last week and I want to compare them. Here's what I remember: run-id abc12345 was the baseline ARIMA with MAPE=0.142, RMSE=8340, n_params=3, data_vintage=2024-Q3. run-id def67890 was a Bayesian structural time series with MAPE=0.118, RMSE=7120, max_rhat=1.008, n_divergences=0, min_bulk_ess=892, data_vintage=2024-Q3. Which should I move forward with and what does the comparison look like?",
+      "expected_output": "A side-by-side comparison table of both runs across all metrics, then a clear recommendation: the Bayesian model wins on MAPE and RMSE, rhat and ESS look acceptable, zero divergences. Recommend promoting the Bayesian run to Staging. Include the code snippet for pulling run comparisons programmatically via MlflowClient.",
+      "files": [],
+      "assertions": [
+        "The response presents a side-by-side comparison table of the two runs",
+        "The response correctly identifies the Bayesian model (def67890) as the winner on MAPE and RMSE",
+        "The response notes that max_rhat=1.008 is acceptable (below 1.01 threshold) and n_divergences=0 is clean",
+        "The response includes a recommendation for which run to proceed with",
+        "The response includes the MlflowClient code for pulling run data programmatically"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm just starting to add MLflow to my Stan model for predicting MOIC across PE fund vintages 2015-2022. I'm confused about what should be tags vs params vs metrics — like should 'n_chains' be a tag or a param? Should 'data_vintage' be a param? And where does ELPD go? Can you explain the distinction and give me recommendations for this model specifically?",
+      "expected_output": "Clear explanation of the tags/params/metrics distinction (tags=categorical/filterable, params=numeric config, metrics=scalar outcomes), with specific recommendations: n_chains as param (numeric config), data_vintage as tag (categorical metadata for filtering), ELPD as metric (scalar outcome). Include examples of good tags, params, and metrics for a Stan/Bayesian MOIC model.",
+      "files": [],
+      "assertions": [
+        "The response clearly distinguishes tags (categorical metadata, filter sidebar) from params (numeric config, plottable) from metrics (scalar outcomes)",
+        "The response correctly places n_chains as a param (not a tag)",
+        "The response correctly places data_vintage as a tag (not a param)",
+        "The response correctly places ELPD as a metric",
+        "The response gives specific recommendations relevant to a Bayesian MOIC/PE model (e.g., MCMC diagnostics as metrics, fund vintage as tag)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "skill_name": "ds-model-evaluator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Hey can you take a look at my sales forecasting pipeline? I want to know if there are any issues before I go to my manager with results. File is at evals/files/sales_forecast_pipeline.py",
+      "expected_output": "A structured review that identifies: (1) preprocessing leakage — StandardScaler fit on full dataset before splitting, (2) temporal leakage — random train/test split instead of time-based split on time-series data, (3) CV leakage — cross_val_score called on X_scaled (already scaled with full-data scaler), (4) potential leakage from year_revenue_avg which aggregates across the full year including future data. Should produce a 'Not ready' or 'Needs fixes' verdict with these as blocking issues.",
+      "files": ["evals/files/sales_forecast_pipeline.py"],
+      "assertions": [
+        "The review identifies that StandardScaler is fit on the full dataset before splitting (preprocessing leakage)",
+        "The review flags that train_test_split uses random shuffling on time-series data instead of a time-based split",
+        "The review identifies that cross_val_score is called on already-scaled data (X_scaled), meaning the scaler leaks across CV folds",
+        "The review identifies year_revenue_avg as a potential leakage vector (full-year aggregate includes future weeks)",
+        "The verdict is 'Needs fixes' or 'Not ready', not 'Ready'",
+        "The review includes recommended next steps that are specific and actionable"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I'm building a churn model and want a gut-check on the plan before we start coding. Here's the writeup: evals/files/churn_model_plan.md",
+      "expected_output": "A design-level review that: (1) flags the risk of including customers who churned mid-window in feature computation (target leakage), (2) flags that 80/20 random split with no time-based holdout doesn't simulate production deployment, (3) notes AUC-ROC can be misleading at 8% imbalance and precision-recall is more informative, (4) flags NPS mean imputation is problematic (not MCAR — customers who didn't get NPS are systematically different), (5) flags CSM as a high-cardinality proxy that should be excluded or carefully encoded. Should ask clarifying questions about anything underspecified.",
+      "files": ["evals/files/churn_model_plan.md"],
+      "assertions": [
+        "The review raises the target leakage question about customers who churned during the feature window",
+        "The review flags the 80/20 random split as insufficient for a temporal prediction problem — should use a time-based holdout",
+        "The review notes that AUC-ROC alone at 8% class imbalance is insufficient and recommends precision-recall metrics",
+        "The review raises the NPS imputation concern (not missing at random — 40% missing is systematic)",
+        "The review identifies CSM (200+ unique values) as a high-cardinality leakage risk or encoding problem",
+        "The verdict section is present and clearly states the status"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We're doing customer segmentation using k-means on our B2B account data. We have around 300 accounts and about 80 features (mix of usage metrics, firmographic data, support history). We picked k=3 because our sales team thinks of customers as small/medium/large. The features are all scaled. What do you think?",
+      "expected_output": "A review of a clustering approach that flags: (1) 300 samples / 80 features is a high-dimensional, low-sample-count setup that causes distance concentration problems for k-means, (2) k=3 chosen by business intuition rather than data (no elbow method, silhouette score, or stability analysis), (3) ask whether the goal is descriptive (understand customers) or operational (assign accounts to treatment), since this changes how quality is measured, (4) k-means assumes spherical clusters and Euclidean distance — with mixed feature types (firmographic + usage), this may be inappropriate, (5) validate whether the chosen clusters are actually actionable for the sales team.",
+      "files": [],
+      "assertions": [
+        "The review flags the high feature-to-sample ratio (80 features, 300 samples) as a dimensionality concern for k-means",
+        "The review flags that k=3 was chosen by intuition and recommends data-driven cluster count validation",
+        "The review asks about or addresses the purpose of the segmentation (descriptive vs. operational) as it affects evaluation",
+        "The review mentions that k-means assumes spherical clusters / Euclidean distance, which may not suit mixed feature types",
+        "The review recommends actionability validation with the sales team"
+      ]
+    }
+    ,
+    {
+      "id": 4,
+      "prompt": "Can you review this PyMC model I wrote for estimating store-level conversion rates? evals/files/conversion_rate_bayes.py",
+      "expected_output": "A Bayesian-aware review that identifies: (1) no pooling (Uniform per store) is a poor choice when store sample sizes range from 8 to 2,400 — small stores get flat posteriors, large stores dominate; partial pooling via a Beta-Binomial or hierarchical model is appropriate, (2) no prior predictive check — Uniform(0,1) is actually fine here but the check should still be documented, (3) no posterior predictive check shown, (4) no MCMC diagnostics reported beyond the default summary (should check R-hat, ESS, divergences explicitly), (5) reporting only the posterior mean loses the key advantage of Bayesian inference — credible intervals should be central to the budget allocation decision.",
+      "files": ["evals/files/conversion_rate_bayes.py"],
+      "assertions": [
+        "The review identifies the no-pooling structure (independent Uniform per store) as problematic for small stores with few observations",
+        "The review recommends partial pooling / hierarchical structure as the appropriate alternative",
+        "The review flags the absence of a posterior predictive check",
+        "The review flags that MCMC diagnostics (R-hat, ESS, divergences) are not inspected in the code",
+        "The review notes that only posterior means are reported, and that credible intervals are important for the stated decision use case"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Here's our plan for a Bayesian churn model — want to make sure the modeling choices are solid before we start writing Stan code: evals/files/churn_bayes_plan.md",
+      "expected_output": "A design-level Bayesian review that flags: (1) Normal(0, 10) priors on logit-scale coefficients are too wide — they put substantial prior mass on conversion probabilities near 0 and 1, a prior predictive check would reveal this, (2) treating industry as fixed intercepts (complete pooling within industry, no pooling across) may be wrong when industry group sizes range from 40 to 800 — a hierarchical prior on group intercepts is worth considering, (3) coefficients fixed across industries may miss important interactions (e.g., MRR effect differs by vertical) — partial pooling on slopes is worth considering, (4) AUC-ROC as the sole validation metric discards the calibration of the posterior probability — posterior predictive checks and calibration curves are more appropriate for a Bayesian model, (5) 'ship if AUC > 0.75' ignores posterior uncertainty — decisions should incorporate credible intervals, not just point estimates.",
+      "files": ["evals/files/churn_bayes_plan.md"],
+      "assertions": [
+        "The review flags Normal(0, 10) priors on logit-scale coefficients as too wide and recommends tighter weakly-informative priors",
+        "The review recommends running a prior predictive check to verify prior implications on the probability scale",
+        "The review addresses the pooling structure for industry intercepts — raises partial pooling as an alternative to fixed intercepts",
+        "The review flags AUC-ROC alone as an insufficient validation metric for a Bayesian model (calibration and posterior predictive checks should be included)",
+        "The review notes that the 'AUC > 0.75 → ship' threshold ignores posterior uncertainty"
+      ]
+    }
+  ]
+}
