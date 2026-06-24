@@ -8,3 +8,7 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Generated third-party analysis artifacts
+third_party_security_scan.txt
+third_party_skill_inventory.json
