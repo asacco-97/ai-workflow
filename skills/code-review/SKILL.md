@@ -1,4 +1,5 @@
 ---
+name: code-review
 description: Review code changes for correctness, maintainability, tests, and risk. Use when asked to review a diff, PR, implementation, or recent code changes.
 ---
 
