@@ -2,8 +2,40 @@
 
 ## Project purpose
 
-<!-- TODO: Replace this section with a 2-3 sentence description of what this project builds,
-     what problem it solves, and who the stakeholders are. -->
+<!-- TODO: 2-3 sentences. What does this project build, what problem does it solve,
+     and who are the primary users or stakeholders? -->
+
+## Decision support
+
+<!-- TODO: What decision does this project support?
+     E.g., "This model supports the marketing team's decision on which customers to
+     target for the Q3 retention campaign. The output is a weekly scored file." -->
+
+## Stakeholders
+
+<!-- TODO: Who needs what from this project, and on what cadence?
+     E.g., "Marketing analyst: weekly predictions file by Monday 8am.
+            Data science lead: model evaluation report before any promotion." -->
+
+---
+
+## Build and test
+
+<!-- TODO: Fill in actual commands for this project. -->
+
+```bash
+# Install
+pip install -e ".[dev]"
+
+# Test
+pytest tests/
+
+# Lint
+ruff check src/ tests/
+
+# Train (replace with actual entry point)
+python src/train.py --config configs/default.yaml
+```
 
 ---
 
@@ -18,6 +50,29 @@ Follow this sequence for any non-trivial modeling task:
 5. Evaluate with `/ds-model-evaluator` after any major modeling change.
 6. Validate with `/validation-framework` before considering a model shippable.
 7. Review with `/review-own-branch` + `security-privacy-reviewer` before any PR.
+
+---
+
+## Skill and subagent map
+
+| Stage | Use |
+|---|---|
+| Scoping / planning | `/research-to-plan` · `project-planner` |
+| Data audit | `data-auditor` · `/data-quality-audit` |
+| Data contract | `/data-contract` |
+| Experiment tracking | `/experiment-backlog` |
+| Architecture decision | `modeling-architect` |
+| MLflow setup / fix | `/mlflow-experiment` · `mlflow-engineer` |
+| Config schema | `/yaml-config-designer` |
+| Model evaluation | `/ds-model-evaluator` |
+| Validation design | `validation-reviewer` · `/validation-framework` |
+| Bayesian diagnostics | `bayesian-reviewer` |
+| Notebook refactor | `notebook-refactorer` · `/notebook-to-pipeline` |
+| PR review | `/review-own-branch` · `code-reviewer` |
+| Security review | `security-privacy-reviewer` |
+| Literature / prior art | `literature-scout` |
+| Debugging | `debugger` |
+| Model card | `/model-card` |
 
 ---
 
@@ -50,7 +105,7 @@ Define the evaluation strategy — metric, CV scheme, holdout split — before t
 
 ### Memory protocol
 
-After any session that makes a durable decision, write a brief note to the appropriate memory folder:
+After any session that makes a durable decision, write a brief note to the appropriate folder:
 
 - `memory/decisions/` — what was decided and why
 - `memory/failed-approaches/` — what was tried and why it didn't work

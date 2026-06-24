@@ -14,10 +14,20 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 
+# Broad pattern for skills/agents (any mention of sensitive terms in code/config context)
 SENSITIVE_PATTERNS = re.compile(
     r"\.env|api[_-]?key|secret[_-]?key|private[_-]?key|password|passwd|token|credential|aws_access|aws_secret",
     re.IGNORECASE,
 )
+
+# Narrow pattern for rule files: only flag actual assignments or literal values,
+# not instructional text that discusses these concepts.
+RULE_SENSITIVE_PATTERNS = re.compile(
+    r'(?:api[_-]?key|secret[_-]?key|private[_-]?key|password|aws_access|aws_secret)\s*=\s*["\'][^"\']{4,}["\']',
+    re.IGNORECASE,
+)
+
+RULE_MAX_LINES = 100
 
 SUSPICIOUS_TOOLS = {"Bash", "Write", "Edit"}
 
@@ -121,14 +131,46 @@ def audit_rules(root: Path) -> list[dict]:
     if not rules_dir.is_dir():
         return results
 
-    for rule_file in sorted(rules_dir.iterdir()):
-        if not rule_file.is_file():
-            continue
-        issues = []
+    # Collect all rule files with their relative paths
+    rule_files = sorted(rules_dir.rglob("*.md"))
+    if not rule_files:
+        return results
+
+    # First pass: gather content and per-file issues, collect headings for dup detection
+    heading_index: dict[str, list[str]] = {}  # normalized heading → [rel paths]
+    file_data: list[tuple[str, list]] = []
+
+    for rule_file in rule_files:
+        rel = str(rule_file.relative_to(rules_dir))
+        issues: list[str] = []
         text = rule_file.read_text(errors="ignore")
-        if SENSITIVE_PATTERNS.search(text):
-            issues.append("possible sensitive reference (secret/token/key/credential)")
-        results.append({"type": "rule", "name": rule_file.name, "issues": issues})
+
+        # Narrow sensitive-content check (rules discuss these topics by design)
+        if RULE_SENSITIVE_PATTERNS.search(text):
+            issues.append("possible literal credential assignment")
+
+        # Line length check
+        lines = text.splitlines()
+        if len(lines) > RULE_MAX_LINES:
+            issues.append(f"long rule file ({len(lines)} lines; consider splitting at {RULE_MAX_LINES})")
+
+        # Collect headings for cross-file duplicate detection
+        headings = re.findall(r"^#{1,3}\s+(.+)$", text, re.MULTILINE)
+        for h in headings:
+            normalized = h.strip().lower()
+            heading_index.setdefault(normalized, []).append(rel)
+
+        file_data.append((rel, issues))
+
+    # Second pass: flag files that share a heading with another file
+    for rel, issues in file_data:
+        for heading, locations in heading_index.items():
+            if rel in locations and len(locations) > 1:
+                others = ", ".join(loc for loc in locations if loc != rel)
+                issues.append(f"heading '{heading}' also appears in: {others}")
+
+    for rel, issues in file_data:
+        results.append({"type": "rule", "name": rel, "issues": issues})
 
     return results
 
@@ -165,11 +207,11 @@ def main() -> None:
         if tp.is_dir():
             roots.append(tp)
         else:
-            print("Note: third_party/ not found, skipping.")
+            print("Note: third_party/ not found (submodule not initialized), skipping.")
 
     all_results: list[dict] = []
     for root in roots:
-        prefix = f"[third_party] " if root != REPO_ROOT else ""
+        prefix = "[third_party] " if root != REPO_ROOT else ""
         skills = audit_skills(root)
         for r in skills:
             r["name"] = prefix + r["name"]

@@ -75,25 +75,24 @@ else
   echo "WARN: agents/ not found in repo root, skipping."
 fi
 
-# --- rules -------------------------------------------------------------------
+# --- rules (recursive, preserves subdirectory structure) ---------------------
 
 RULES_SRC="${REPO_ROOT}/rules"
 RULES_DEST="${CLAUDE_DIR}/rules"
 
 if [[ -d "$RULES_SRC" ]]; then
-  has_rules=false
-  for f in "${RULES_SRC}"/*; do
-    [[ -e "$f" ]] && has_rules=true && break
-  done
-  if $has_rules; then
-    mkdir -p "$RULES_DEST"
-    for rule_file in "${RULES_SRC}"/*; do
-      [[ -f "$rule_file" ]] || continue
-      name="$(basename "$rule_file")"
-      install_item "$rule_file" "$RULES_DEST"
-      installed_rules+=("$name")
-    done
-  fi
+  while IFS= read -r -d '' rule_file; do
+    rel="${rule_file#${RULES_SRC}/}"
+    dest="${RULES_DEST}/${rel}"
+    mkdir -p "$(dirname "$dest")"
+    if [[ "$MODE" == "symlink" ]]; then
+      [[ -L "$dest" ]] && rm "$dest"
+      ln -s "$rule_file" "$dest"
+    else
+      cp "$rule_file" "$dest"
+    fi
+    installed_rules+=("$rel")
+  done < <(find "$RULES_SRC" -name "*.md" -print0 | sort -z)
 else
   echo "WARN: rules/ not found in repo root, skipping."
 fi

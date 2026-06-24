@@ -69,18 +69,22 @@ if (Test-Path $AgentsSrc) {
     Write-Warning "agents/ not found in repo root, skipping."
 }
 
-# --- rules -------------------------------------------------------------------
+# --- rules (recursive, preserves subdirectory structure) ---------------------
 
 $RulesSrc  = Join-Path $RepoRoot "rules"
 $RulesDest = Join-Path $ClaudeDir "rules"
 
 if (Test-Path $RulesSrc) {
-    $ruleFiles = Get-ChildItem $RulesSrc -File
+    $ruleFiles = Get-ChildItem $RulesSrc -Filter "*.md" -Recurse
     if ($ruleFiles.Count -gt 0) {
         New-Item -ItemType Directory -Force -Path $RulesDest | Out-Null
         foreach ($ruleFile in $ruleFiles) {
-            Install-File $ruleFile.FullName $RulesDest
-            $InstalledRules += $ruleFile.Name
+            $rel = $ruleFile.FullName.Substring($RulesSrc.Length + 1)
+            $dest = Join-Path $RulesDest $rel
+            $destDir = Split-Path $dest -Parent
+            New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+            Copy-Item -Path $ruleFile.FullName -Destination $dest -Force
+            $InstalledRules += $rel
         }
     }
 } else {

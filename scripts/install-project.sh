@@ -82,25 +82,24 @@ if [[ -d "$AGENTS_SRC" ]]; then
   done
 fi
 
-# --- rules -------------------------------------------------------------------
+# --- rules (recursive, preserves subdirectory structure) ---------------------
 
 RULES_SRC="${REPO_ROOT}/rules"
 RULES_DEST="${CLAUDE_DIR}/rules"
 
 if [[ -d "$RULES_SRC" ]]; then
-  has_rules=false
-  for f in "${RULES_SRC}"/*; do
-    [[ -e "$f" ]] && has_rules=true && break
-  done
-  if $has_rules; then
-    mkdir -p "$RULES_DEST"
-    for rule_file in "${RULES_SRC}"/*; do
-      [[ -f "$rule_file" ]] || continue
-      name="$(basename "$rule_file")"
-      install_item "$rule_file" "$RULES_DEST"
-      installed_rules+=("$name")
-    done
-  fi
+  while IFS= read -r -d '' rule_file; do
+    rel="${rule_file#${RULES_SRC}/}"
+    dest="${RULES_DEST}/${rel}"
+    mkdir -p "$(dirname "$dest")"
+    if [[ "$MODE" == "symlink" ]]; then
+      [[ -L "$dest" ]] && rm "$dest"
+      ln -s "$rule_file" "$dest"
+    else
+      cp "$rule_file" "$dest"
+    fi
+    installed_rules+=("$rel")
+  done < <(find "$RULES_SRC" -name "*.md" -print0 | sort -z)
 fi
 
 # --- CLAUDE.md template ------------------------------------------------------
@@ -115,6 +114,16 @@ elif [[ -f "$PROJECT_CLAUDE" ]]; then
   echo "CLAUDE.md already exists at ${PROJECT_DIR}/CLAUDE.md — skipping."
 fi
 
+# --- .claude/rules README template -------------------------------------------
+
+TEMPLATE_RULES_README="${REPO_ROOT}/templates/project-claude/.claude/rules/README.md"
+PROJECT_RULES_README="${CLAUDE_DIR}/rules/README.md"
+
+if [[ -f "$TEMPLATE_RULES_README" && ! -f "$PROJECT_RULES_README" ]]; then
+  mkdir -p "${CLAUDE_DIR}/rules"
+  cp "$TEMPLATE_RULES_README" "$PROJECT_RULES_README"
+fi
+
 # --- memory / docs / reports scaffolding -------------------------------------
 
 DIRS=(
@@ -122,6 +131,7 @@ DIRS=(
   "memory/failed-approaches"
   "memory/workflows"
   "memory/session-logs"
+  "memory/project-context"
   "docs/plans"
   "docs/data-contracts"
   "docs/validation"
@@ -136,13 +146,12 @@ for dir in "${DIRS[@]}"; do
   target="${PROJECT_DIR}/${dir}"
   if [[ ! -d "$target" ]]; then
     mkdir -p "$target"
-    # Place a .gitkeep so empty dirs are tracked
     touch "${target}/.gitkeep"
     created_dirs+=("$dir")
   fi
 done
 
-# Copy memory index template if present and not already there
+# Copy memory index template if not already present
 TEMPLATE_MEM="${REPO_ROOT}/templates/project-claude/memory/index.md"
 PROJECT_MEM="${PROJECT_DIR}/memory/index.md"
 if [[ -f "$TEMPLATE_MEM" && ! -f "$PROJECT_MEM" ]]; then

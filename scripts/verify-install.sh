@@ -74,21 +74,22 @@ fi
 
 echo ""
 
-# --- rules -------------------------------------------------------------------
+# --- rules (recursive) -------------------------------------------------------
 
 echo "Rules (${RULES_DIR}):"
 if [[ ! -d "$RULES_DIR" ]]; then
   echo "  INFO rules/ not installed (optional)"
 else
   found=0
-  for rule_file in "${RULES_DIR}"/*; do
+  while IFS= read -r -d '' rule_file; do
     [[ -f "$rule_file" ]] || continue
-    name="$(basename "$rule_file")"
+    rel="${rule_file#${RULES_DIR}/}"
     ((found++)) || true
-    pass "${name}"
-  done
+    pass "${rel}"
+  done < <(find "$RULES_DIR" -name "*.md" -print0 | sort -z)
+
   if [[ $found -eq 0 ]]; then
-    echo "  INFO rules/ exists but is empty (optional)"
+    echo "  INFO rules/ exists but contains no .md files (optional)"
   fi
 fi
 
