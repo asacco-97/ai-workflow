@@ -1,0 +1,10 @@
+# Claude Code worktrees are ephemeral — never commit them
+.claude/worktrees/
+
+# Local settings contain machine-specific paths and tokens
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
