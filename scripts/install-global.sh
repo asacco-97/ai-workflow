@@ -34,7 +34,12 @@ install_item() {
     ln -s "$src" "$dest"
   else
     if [[ -d "$src" ]]; then
-      cp -r "$src" "$dest_dir/"
+      # Copy to the explicit dest (not "$dest_dir/"). On BSD/macOS cp, a
+      # trailing slash on the source means "copy contents", which would
+      # flatten the directory into the destination. Strip it and name the
+      # dest directly so the directory itself is copied on every platform.
+      rm -rf "$dest"
+      cp -R "${src%/}" "$dest"
     else
       cp "$src" "$dest"
     fi
